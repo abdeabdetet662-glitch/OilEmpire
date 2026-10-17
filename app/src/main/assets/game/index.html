@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>بترول أُمّة</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0A0A0A; font-family: -apple-system, sans-serif; user-select: none; }
+  canvas { display: block; touch-action: none; }
+
+  /* ═══ Loading ═══ */
+  #loading {
+    position: fixed; inset: 0; z-index: 1000;
+    background: linear-gradient(135deg, #1A0F05, #2A1A0A, #1A0F05);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    color: #FF6B35;
+  }
+  .spinner {
+    width: 80px; height: 80px;
+    border: 4px solid rgba(255,107,53,0.15);
+    border-top: 4px solid #FF6B35;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-title { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+  .load-sub { font-size: 12px; color: #A08060; margin-top: 8px; }
+
+  /* ═══ HUD أعلى ═══ */
+  #hudTop {
+    position: fixed; top: 12px; left: 12px; right: 12px;
+    z-index: 100;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none;
+  }
+  .hud-card {
+    background: rgba(10,10,10,0.9);
+    border: 1.5px solid #FF6B35;
+    border-radius: 14px;
+    padding: 10px 16px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    min-width: 110px;
+  }
+  .hud-card .label {
+    color: #A08060;
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .hud-card .value {
+    color: #FFD700;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hud-card .value .emoji { font-size: 16px; }
+
+  /* ═══ HUD يمين — السرعة ═══ */
+  #speedHud {
+    text-align: right;
+  }
+  #speedHud .value {
+    color: #4CAF50;
+    font-size: 14px;
+  }
+
+  /* ═══ أزرار تحكم ═══ */
+  #controls {
+    position: fixed; bottom: 20px; left: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 100;
+  }
+  #controls button {
+    width: 48px; height: 48px;
+    background: rgba(10,10,10,0.9);
+    border: 1.5px solid #FF6B35;
+    border-radius: 12px;
+    color: #FF6B35;
+    font-size: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.15s;
+  }
+  #controls button:active {
+    transform: scale(0.92);
+    background: rgba(255,107,53,0.2);
+  }
+
+  /* ═══ أزرار سفلية ═══ */
+  #bottomBar {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    z-index: 100;
+  }
+  #bottomBar button {
+    padding: 12px 20px;
+    background: rgba(10,10,10,0.9);
+    border: 1.5px solid #FF6B35;
+    border-radius: 12px;
+    color: #FF6B35;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  #bottomBar button:active {
+    transform: scale(0.95);
+    background: rgba(255,107,53,0.2);
+  }
+  #bottomBar button.primary {
+    background: linear-gradient(135deg, #FF6B35, #D2501F);
+    color: white;
+    border-color: #FF6B35;
+  }
+
+  /* ═══ Building Panel ═══ */
+  #buildPanel {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, #1A0F05, #0A0505);
+    border-top: 3px solid #FF6B35;
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 30px;
+    z-index: 200;
+    display: none;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  #buildPanel.show {
+    display: block;
+    transform: translateY(0);
+  }
+  #buildPanel .handle {
+    width: 40px; height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  #buildPanel h2 {
+    color: #FF6B35;
+    font-size: 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .build-item {
+    display: flex; align-items: center;
+    background: #1A0F05;
+    border: 1.5px solid rgba(255,107,53,0.3);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .build-item:active {
+    transform: scale(0.98);
+    background: rgba(255,107,53,0.1);
+  }
+  .build-item.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .build-item .emoji {
+    font-size: 32px;
+    margin-left: 12px;
+  }
+  .build-item .info {
+    flex: 1;
+  }
+  .build-item .name {
+    color: #FFD700;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .build-item .desc {
+    color: #A08060;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .build-item .price {
+    color: #4CAF50;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .build-item .price.cant-afford {
+    color: #F44336;
+  }
+
+  /* ═══ Toast ═══ */
+  .toast {
+    position: fixed; top: 100px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10,10,10,0.95);
+    color: #FFD700;
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 2px solid #FF6B35;
+    font-size: 14px;
+    z-index: 500;
+    display: none;
+    max-width: 85%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+  .toast.show {
+    display: block;
+    animation: toastIn 0.3s ease-out;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* ═══ Info Panel — لما تضغط على مبنى ═══ */
+  #infoPanel {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 300;
+    display: none;
+    align-items: flex-end;
+    backdrop-filter: blur(4px);
+  }
+  #infoPanel.show { display: flex; }
+  #infoPanel .panel {
+    width: 100%;
+    background: linear-gradient(180deg, #1A0F05, #0A0505);
+    border-top: 3px solid #FF6B35;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 30px;
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  #infoPanel h3 {
+    color: #FF6B35;
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  #infoPanel .row {
+    color: #F5F5F5;
+    font-size: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,107,53,0.15);
+    display: flex;
+    justify-content: space-between;
+  }
+  #infoPanel .row:last-of-type { border-bottom: none; }
+  #infoPanel .row b { color: #FFD700; }
+  #infoPanel .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  #infoPanel button {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #infoPanel .btn-close {
+    background: #2A1A0A;
+    color: #F5F5F5;
+  }
+  #infoPanel .btn-upgrade {
+    background: linear-gradient(135deg, #FF6B35, #D2501F);
+    color: white;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="load-title">🛢️ بترول أُمّة</div>
+  <div class="load-sub">جاري تحميل اللعبة...</div>
+</div>
+
+<!-- HUD -->
+<div id="hudTop">
+  <div class="hud-card">
+    <div class="label">💰 المال</div>
+    <div class="value">
+      <span class="emoji">💰</span>
+      <span id="moneyValue">0</span>
+    </div>
+  </div>
+  <div class="hud-card" id="speedHud">
+    <div class="label">⚡ السرعة</div>
+    <div class="value">x<span id="speedValue">1.0</span></div>
+  </div>
+</div>
+
+<!-- أزرار تحكم -->
+<div id="controls">
+  <button onclick="zoomIn()">➕</button>
+  <button onclick="zoomOut()">➖</button>
+  <button onclick="resetCamera()">🎯</button>
+</div>
+
+<!-- أزرار سفلية -->
+<div id="bottomBar">
+  <button class="primary" onclick="toggleBuildPanel()">🔨 بناء</button>
+  <button onclick="toggleUpgrades()">⚡ ترقيات</button>
+</div>
+
+<!-- Build Panel -->
+<div id="buildPanel">
+  <div class="handle"></div>
+  <h2>🔨 بناء</h2>
+  <div id="buildList"></div>
+</div>
+
+<!-- Info Panel -->
+<div id="infoPanel">
+  <div class="panel">
+    <h3 id="infoTitle">🛢️ مضخة</h3>
+    <div id="infoContent"></div>
+    <div class="btn-row">
+      <button class="btn-close" onclick="closeInfo()">إغلاق</button>
+      <button class="btn-upgrade" onclick="upgradeCurrent()" id="btnUpgrade">ترقية</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+window.onerror = function(msg, url, line, col, err) {
+    var full = "JS_ERROR: " + msg + " @ " + line + ":" + col + " in " + url;
+    console.error(full);
+    if (window.AndroidBridge && AndroidBridge.logError) {
+        AndroidBridge.logError(full);
+    }
+    var loading = document.getElementById('loading');
+    if (loading && loading.style.display !== 'none') {
+        loading.innerHTML = '<div style="color:#F44336;font-size:11px;padding:20px;text-align:left;direction:ltr;">' +
+            '<b>❌ JS ERROR:</b><br>' + msg + '<br><br>' +
+            '<b>Line:</b> ' + line + ':' + col + '<br>' +
+            '<b>URL:</b> ' + (url || '') +
+            '</div>';
+    }
+};
+window.addEventListener('unhandledrejection', function(e) {
+    var full = "PROMISE_REJ: " + e.reason;
+    console.error(full);
+    if (window.AndroidBridge && AndroidBridge.logError) {
+        AndroidBridge.logError(full);
+    }
+});
+console.log("📄 HTML loaded, waiting for Three.js...");
+</script>
+<script src="libs/three.min.js"></script>
+<script src="libs/OrbitControls.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  الإعدادات العامة
+// ═══════════════════════════════════════════════════════════
+
+const WORLD = 200;
+const HALF = WORLD / 2;
+
+// ═══════════════════════════════════════════════════════════
+//  Scene + Camera + Renderer
+// ═══════════════════════════════════════════════════════════
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xE8B87A);
+scene.fog = new THREE.Fog(0xE8B87A, 150, 350);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(100, 110, 100);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 40;
+controls.maxDistance = 300;
+controls.maxPolarAngle = Math.PI / 2.3;
+controls.target.set(0, 5, 0);
+controls.update();
+
+// ═══════════════════════════════════════════════════════════
+//  الإضاءة
+// ═══════════════════════════════════════════════════════════
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambient);
+
+const hemi = new THREE.HemisphereLight(0xFFE4C4, 0xC89B5A, 0.55);
+scene.add(hemi);
+
+// شمس حارة
+const sun = new THREE.DirectionalLight(0xFFDDA0, 1.4);
+sun.position.set(80, 120, 60);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 400;
+sun.shadow.camera.left = -150;
+sun.shadow.camera.right = 150;
+sun.shadow.camera.top = 150;
+sun.shadow.camera.bottom = -150;
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+
+// إضاءة خلفية (تبريد)
+const fill = new THREE.DirectionalLight(0xFFB880, 0.3);
+fill.position.set(-80, 60, -100);
+scene.add(fill);
+
+// ═══════════════════════════════════════════════════════════
+//  السماء
+// ═══════════════════════════════════════════════════════════
+
+const skyGeo = new THREE.SphereGeometry(500, 32, 16);
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide,
+  uniforms: {
+    topColor: { value: new THREE.Color(0x4A90D0) },
+    midColor: { value: new THREE.Color(0x87CEEB) },
+    botColor: { value: new THREE.Color(0xFFD4A0) },
+    offset: { value: 100 },
+    exponent: { value: 0.7 }
+  },
+  vertexShader: `
+    varying vec3 vWorldPos;
+    void main() {
+      vec4 wp = modelMatrix * vec4(position, 1.0);
+      vWorldPos = wp.xyz;
+      gl_Position = projectionMatrix * viewMatrix * wp;
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 topColor; uniform vec3 midColor; uniform vec3 botColor;
+    uniform float offset; uniform float exponent;
+    varying vec3 vWorldPos;
+    void main() {
+      float h = normalize(vWorldPos + vec3(0.0, offset, 0.0)).y;
+      float f = max(pow(max(h, 0.0), exponent), 0.0);
+      vec3 col;
+      if (h < 0.15) {
+        col = mix(botColor, midColor, h / 0.15);
+      } else {
+        col = mix(midColor, topColor, (h - 0.15) / 0.85);
+      }
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `
+});
+const sky = new THREE.Mesh(skyGeo, skyMat);
+scene.add(sky);
+
+// ═══════════════════════════════════════════════════════════
+//  الشمس (كيان بصري)
+// ═══════════════════════════════════════════════════════════
+
+const sunSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(15, 24, 16),
+  new THREE.MeshBasicMaterial({ color: 0xFFEEAA })
+);
+sunSphere.position.set(150, 200, 100);
+scene.add(sunSphere);
+
+// هالة الشمس
+const sunGlow = new THREE.Mesh(
+  new THREE.SphereGeometry(25, 16, 12),
+  new THREE.MeshBasicMaterial({
+    color: 0xFFD700, transparent: true, opacity: 0.2
+  })
+);
+sunGlow.position.copy(sunSphere.position);
+scene.add(sunGlow);
+
+// ═══════════════════════════════════════════════════════════
+//  الأرض الصحراوية
+// ═══════════════════════════════════════════════════════════
+
+// الرمل الأساسي
+const sandMat = new THREE.MeshLambertMaterial({ color: 0xE8C48A });
+const groundGeo = new THREE.PlaneGeometry(WORLD * 3, WORLD * 3, 100, 100);
+
+// نضيف كثبان رملية (تضاريس)
+const positions = groundGeo.attributes.position;
+for (let i = 0; i < positions.count; i++) {
+  const x = positions.getX(i);
+  const y = positions.getY(i);
+  // موجات رملية
+  const h = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 2 + Math.sin(x * 0.1) * 1.5;
+  positions.setZ(i, h);
+}
+groundGeo.computeVertexNormals();
+
+const ground = new THREE.Mesh(groundGeo, sandMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// منطقة اللعب (مسطحة)
+const playMat = new THREE.MeshLambertMaterial({ color: 0xD4A76A });
+const playGround = new THREE.Mesh(
+  new THREE.PlaneGeometry(WORLD, WORLD),
+  playMat
+);
+playGround.rotation.x = -Math.PI / 2;
+playGround.position.y = 0.05;
+playGround.receiveShadow = true;
+scene.add(playGround);
+
+// حدود منطقة اللعب (خط ذهبي)
+const borderGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(WORLD, WORLD));
+const borderLine = new THREE.LineSegments(
+  borderGeo,
+  new THREE.LineBasicMaterial({ color: 0xFF6B35, opacity: 0.5, transparent: true })
+);
+borderLine.rotation.x = -Math.PI / 2;
+borderLine.position.y = 0.1;
+scene.add(borderLine);
+
+// ═══════════════════════════════════════════════════════════
+//  كثبان رملية (Dunes)
+// ═══════════════════════════════════════════════════════════
+
+const duneMat = new THREE.MeshLambertMaterial({ color: 0xE0B87A });
+
+function makeDune(x, z, size) {
+  const dune = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    duneMat
+  );
+  dune.scale.set(1.5, 0.5, 1);
+  dune.position.set(x, 0, z);
+  dune.castShadow = true;
+  dune.receiveShadow = true;
+  scene.add(dune);
+}
+
+// كثبان حول المنطقة
+const dunePositions = [
+  [-120, -100, 15], [-140, 80, 18], [-100, 130, 12],
+  [120, -120, 20], [140, 60, 14], [100, 130, 16],
+  [-50, -140, 13], [60, -140, 17]
+];
+dunePositions.forEach(([x, z, s]) => makeDune(x, z, s));
+
+// ═══════════════════════════════════════════════════════════
+//  الجبال (في الخلفية)
+// ═══════════════════════════════════════════════════════════
+
+const mountainMat = new THREE.MeshLambertMaterial({ color: 0xA87850 });
+
+function makeMountain(x, z, height, radius) {
+  const m = new THREE.Mesh(
+    new THREE.ConeGeometry(radius, height, 8),
+    mountainMat
+  );
+  m.position.set(x, height / 2, z);
+  m.castShadow = true;
+  scene.add(m);
+}
+
+// جبال في الخلفية
+makeMountain(-200, -180, 80, 60);
+makeMountain(-150, -200, 100, 70);
+makeMountain(-100, -190, 70, 50);
+makeMountain(180, -200, 90, 65);
+makeMountain(220, -180, 110, 75);
+makeMountain(150, -190, 75, 55);
+
+// ═══════════════════════════════════════════════════════════
+//  واحات النخيل
+// ═══════════════════════════════════════════════════════════
+
+const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6B4A2A });
+const leafMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+
+function makePalm(x, z, scale) {
+  const palm = new THREE.Group();
+
+  // الجذع
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.6, 0.9, 12, 8),
+    trunkMat
+  );
+  trunk.position.y = 6;
+  trunk.castShadow = true;
+  palm.add(trunk);
+
+  // أوراق النخيل (8 أوراق)
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const leaf = new THREE.Mesh(
+      new THREE.ConeGeometry(1.2, 6, 4),
+      leafMat
+    );
+    leaf.position.y = 12;
+    leaf.rotation.z = Math.PI / 2.5;
+    leaf.rotation.y = angle;
+    leaf.position.x = Math.cos(angle) * 2.5;
+    leaf.position.z = Math.sin(angle) * 2.5;
+    leaf.castShadow = true;
+    palm.add(leaf);
+  }
+
+  // التمر
+  const dateMat = new THREE.MeshLambertMaterial({ color: 0xD2691E });
+  for (let i = 0; i < 6; i++) {
+    const date = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, 6, 4),
+      dateMat
+    );
+    date.position.set(
+      Math.cos(i) * 1.5,
+      10 + Math.random(),
+      Math.sin(i) * 1.5
+    );
+    palm.add(date);
+  }
+
+  palm.position.set(x, 0, z);
+  palm.scale.set(scale, scale, scale);
+  scene.add(palm);
+}
+
+// واحة 1 — شمال شرق
+makePalm(70, -80, 1.0);
+makePalm(75, -85, 0.9);
+makePalm(65, -75, 1.1);
+makePalm(80, -70, 0.95);
+
+// واحة 2 — جنوب غرب
+makePalm(-90, 90, 1.05);
+makePalm(-85, 95, 0.9);
+makePalm(-95, 100, 1.0);
+
+// نخيل متفرق
+makePalm(-60, 20, 0.8);
+makePalm(60, 60, 0.85);
+makePalm(-50, -60, 0.9);
+
+// ═══════════════════════════════════════════════════════════
+//  الجمال (Camel)
+// ═══════════════════════════════════════════════════════════
+
+const camelMat = new THREE.MeshLambertMaterial({ color: 0xB8895A });
+const camels = [];
+
+function makeCamel() {
+  const g = new THREE.Group();
+
+  // الجسم
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 2, 4),
+    camelMat
+  );
+  body.position.y = 2.5;
+  body.castShadow = true;
+  g.add(body);
+
+  // السنام
+  const hump = new THREE.Mesh(
+    new THREE.SphereGeometry(1.2, 8, 6),
+    camelMat
+  );
+  hump.position.y = 3.8;
+  hump.scale.set(1, 0.8, 1);
+  hump.castShadow = true;
+  g.add(hump);
+
+  // الرقبة
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.5, 2.5, 6),
+    camelMat
+  );
+  neck.position.set(0, 3, 2);
+  neck.rotation.x = -0.3;
+  neck.castShadow = true;
+  g.add(neck);
+
+  // الرأس
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.8, 1.2),
+    camelMat
+  );
+  head.position.set(0, 4, 3.2);
+  head.castShadow = true;
+  g.add(head);
+
+  // الأرجل (4)
+  for (let x of [-1.2, 1.2]) {
+    for (let z of [-1.5, 1.5]) {
+      const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 2, 6),
+        camelMat
+      );
+      leg.position.set(x, 1, z);
+      leg.castShadow = true;
+      g.add(leg);
+    }
+  }
+
+  return g;
+}
+
+// 3 جمال
+for (let i = 0; i < 3; i++) {
+  const camel = makeCamel();
+  camel.position.set(
+    -80 + Math.random() * 160,
+    0,
+    -60 + Math.random() * 120
+  );
+  camel.rotation.y = Math.random() * Math.PI * 2;
+  camel.userData = {
+    speed: 0.3 + Math.random() * 0.3,
+    direction: Math.random() * Math.PI * 2
+  };
+  scene.add(camel);
+  camels.push(camel);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  الصخور
+// ═══════════════════════════════════════════════════════════
+
+const rockMat = new THREE.MeshLambertMaterial({ color: 0x8B6F4A });
+
+function makeRock(x, z, size) {
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(size, 0),
+    rockMat
+  );
+  rock.position.set(x, size * 0.5, z);
+  rock.rotation.set(Math.random(), Math.random(), Math.random());
+  rock.castShadow = true;
+  rock.receiveShadow = true;
+  scene.add(rock);
+}
+
+// صخور متفرقة
+for (let i = 0; i < 20; i++) {
+  const x = (Math.random() - 0.5) * WORLD * 1.5;
+  const z = (Math.random() - 0.5) * WORLD * 1.5;
+  // بعيد على المركز
+  if (Math.sqrt(x * x + z * z) > 40) {
+    makeRock(x, z, 1 + Math.random() * 2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Particles (رمل متطاير)
+// ═══════════════════════════════════════════════════════════
+
+const particleCount = 200;
+const particleGeo = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(particleCount * 3);
+
+for (let i = 0; i < particleCount * 3; i += 3) {
+  particlePositions[i] = (Math.random() - 0.5) * WORLD * 2;
+  particlePositions[i + 1] = Math.random() * 40;
+  particlePositions[i + 2] = (Math.random() - 0.5) * WORLD * 2;
+}
+
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+const particleMat = new THREE.PointsMaterial({
+  color: 0xFFDDA0,
+  size: 0.3,
+  transparent: true,
+  opacity: 0.4
+});
+
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// ═══════════════════════════════════════════════════════════
+//  نظام المباني
+// ═══════════════════════════════════════════════════════════
+
+const buildings = [];
+const buildingMeshes = [];
+
+// أنواع المباني
+const BUILDING_TYPES = {
+  pump: {
+    emoji: '🛢️',
+    name: 'مضخة نفط',
+    desc: 'تستخرج النفط الخام',
+    basePrice: 0,
+    baseIncome: 1,
+    color: 0x8B4513,
+    maxLevel: 20
+  },
+  drill: {
+    emoji: '🏗️',
+    name: 'حفارة',
+    desc: 'تزيد سرعة الاستخراج',
+    basePrice: 500,
+    baseIncome: 0,
+    multiplier: 1.5,
+    color: 0xFF6B35,
+    maxLevel: 20
+  },
+  refinery: {
+    emoji: '🏭',
+    name: 'مصفاة',
+    desc: 'تحول النفط لوقود',
+    basePrice: 2000,
+    baseIncome: 5,
+    color: 0x555555,
+    maxLevel: 20
+  },
+  shop: {
+    emoji: '🏪',
+    name: 'متجر',
+    desc: 'يبيع البنزين',
+    basePrice: 10000,
+    baseIncome: 20,
+    color: 0xFFD700,
+    maxLevel: 20
+  },
+  house: {
+    emoji: '🏠',
+    name: 'سكن عمال',
+    desc: 'يزيد العمال',
+    basePrice: 3000,
+    baseIncome: 0,
+    multiplier: 1.2,
+    color: 0xD2B48C,
+    maxLevel: 20
+  },
+  power: {
+    emoji: '🔋',
+    name: 'محطة كهرباء',
+    desc: 'تشغّل المصافي',
+    basePrice: 15000,
+    baseIncome: 50,
+    color: 0xFFEB3B,
+    maxLevel: 20
+  },
+  port: {
+    emoji: '🚢',
+    name: 'ميناء تصدير',
+    desc: 'يبيع للناقلات',
+    basePrice: 50000,
+    baseIncome: 200,
+    color: 0x1E88E5,
+    maxLevel: 20
+  },
+  mosque: {
+    emoji: '🕌',
+    name: 'مسجد',
+    desc: 'يبارك الإنتاج +10%',
+    basePrice: 100000,
+    baseIncome: 0,
+    multiplier: 1.1,
+    color: 0xF5F0E8,
+    maxLevel: 20
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+//  مولّدات المباني
+// ═══════════════════════════════════════════════════════════
+
+// 🛢️ مضخة نفط
+function makePump() {
+  const g = new THREE.Group();
+
+  // القاعدة
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 0.5, 6),
+    new THREE.MeshLambertMaterial({ color: 0x4A3020 })
+  );
+  base.position.y = 0.25;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  g.add(base);
+
+  // العمود الرئيسي
+  const tower = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 12, 1.5),
+    new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+  );
+  tower.position.y = 6.25;
+  tower.castShadow = true;
+  g.add(tower);
+
+  // الذراع العلوي (يتحرك)
+  const arm = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 0.8, 0.8),
+    new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+  );
+  arm.position.set(2, 11, 0);
+  arm.castShadow = true;
+  arm.userData.isArm = true;
+  g.add(arm);
+
+  // الثقل الموازن
+  const weight = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 2, 2),
+    new THREE.MeshLambertMaterial({ color: 0x555555 })
+  );
+  weight.position.set(-2.5, 11, 0);
+  weight.castShadow = true;
+  g.add(weight);
+
+  // رأس المضخة
+  const head = new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1.5, 4, 8),
+    new THREE.MeshLambertMaterial({ color: 0xFF6B35 })
+  );
+  head.position.set(4, 9, 0);
+  head.castShadow = true;
+  g.add(head);
+
+  // أنبوب النفط
+  const pipe = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.4, 6, 8),
+    new THREE.MeshLambertMaterial({ color: 0x2A2A2A })
+  );
+  pipe.position.set(4, 6, 0);
+  pipe.castShadow = true;
+  g.add(pipe);
+
+  g.userData.type = 'pump';
+  g.userData.isAnimating = true;
+  g.userData.animPhase = 0;
+  return g;
+}
+
+// 🏭 مصفاة
+function makeRefinery() {
+  const g = new THREE.Group();
+
+  // القاعدة
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 1, 8),
+    new THREE.MeshLambertMaterial({ color: 0x333333 })
+  );
+  base.position.y = 0.5;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  g.add(base);
+
+  // 3 خزانات
+  for (let i = 0; i < 3; i++) {
+    const tank = new THREE.Mesh(
+      new THREE.CylinderGeometry(2, 2, 6, 16),
+      new THREE.MeshLambertMaterial({ color: 0x666666 })
+    );
+    tank.position.set(-3 + i * 3, 3.5, 0);
+    tank.castShadow = true;
+    g.add(tank);
+
+    // سقف الخزان
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.2, 2.2, 0.5, 16),
+      new THREE.MeshLambertMaterial({ color: 0x444444 })
+    );
+    cap.position.set(-3 + i * 3, 6.5, 0);
+    cap.castShadow = true;
+    g.add(cap);
+  }
+
+  // أنبوب علوي
+  const topPipe = new THREE.Mesh(
+    new THREE.BoxGeometry(9, 0.5, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xFF6B35 })
+  );
+  topPipe.position.set(0, 7, 0);
+  topPipe.castShadow = true;
+  g.add(topPipe);
+
+  // مدخنة
+  const chimney = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.8, 1, 10, 8),
+    new THREE.MeshLambertMaterial({ color: 0x8B0000 })
+  );
+  chimney.position.set(4, 5.5, 3);
+  chimney.castShadow = true;
+  g.add(chimney);
+
+  g.userData.type = 'refinery';
+  return g;
+}
+
+// 🏪 متجر
+function makeShop() {
+  const g = new THREE.Group();
+
+  // الجدران
+  const walls = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 6, 8),
+    new THREE.MeshLambertMaterial({ color: 0xF5F0E8 })
+  );
+  walls.position.y = 3;
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  g.add(walls);
+
+  // السقف (ملون)
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(9, 1, 9),
+    new THREE.MeshLambertMaterial({ color: 0xFF6B35 })
+  );
+  roof.position.y = 6.5;
+  roof.castShadow = true;
+  g.add(roof);
+
+  // الباب
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 3, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+  );
+  door.position.set(0, 1.5, 4.1);
+  g.add(door);
+
+  // لوحة المحل
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 1.5, 0.3),
+    new THREE.MeshLambertMaterial({ color: 0xFFD700 })
+  );
+  sign.position.set(0, 7.5, 4.1);
+  sign.castShadow = true;
+  g.add(sign);
+
+  // مظلة أمامية
+  const awning = new THREE.Mesh(
+    new THREE.BoxGeometry(9, 0.3, 3),
+    new THREE.MeshLambertMaterial({ color: 0x1E88E5 })
+  );
+  awning.position.set(0, 5.5, 5.5);
+  awning.castShadow = true;
+  g.add(awning);
+
+  g.userData.type = 'shop';
+  return g;
+}
+
+// 🏠 سكن عمال
+function makeHouse() {
+  const g = new THREE.Group();
+
+  // الجدران
+  const walls = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 5, 6),
+    new THREE.MeshLambertMaterial({ color: 0xD2B48C })
+  );
+  walls.position.y = 2.5;
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  g.add(walls);
+
+  // السقف مثلث
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(5, 3, 4),
+    new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+  );
+  roof.position.y = 6.5;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  g.add(roof);
+
+  // الباب
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 2.5, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0x4A3020 })
+  );
+  door.position.set(0, 1.25, 3.1);
+  g.add(door);
+
+  // نافذتين
+  for (let x of [-1.5, 1.5]) {
+    const win = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 0.1),
+      new THREE.MeshLambertMaterial({ color: 0x87CEEB })
+    );
+    win.position.set(x, 3, 3.05);
+    g.add(win);
+  }
+
+  g.userData.type = 'house';
+  return g;
+}
+
+// 🔋 محطة كهرباء
+function makePower() {
+  const g = new THREE.Group();
+
+  // القاعدة
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 0.5, 8),
+    new THREE.MeshLambertMaterial({ color: 0x333333 })
+  );
+  base.position.y = 0.25;
+  base.castShadow = true;
+  g.add(base);
+
+  // 4 أعمدة
+  for (let x of [-2, 2]) {
+    for (let z of [-2, 2]) {
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 8, 0.5),
+        new THREE.MeshLambertMaterial({ color: 0x666666 })
+      );
+      tower.position.set(x, 4, z);
+      tower.castShadow = true;
+      g.add(tower);
+    }
+  }
+
+  // شبكة أعلى
+  const grid = new THREE.Mesh(
+    new THREE.BoxGeometry(5, 0.2, 5),
+    new THREE.MeshLambertMaterial({ color: 0x444444 })
+  );
+  grid.position.y = 8;
+  g.add(grid);
+
+  // برج عالٍ
+  const tallTower = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.5, 12, 8),
+    new THREE.MeshLambertMaterial({ color: 0x666666 })
+  );
+  tallTower.position.y = 6.5;
+  tallTower.castShadow = true;
+  g.add(tallTower);
+
+  // علامة تحذير
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 1, 0.1),
+    new THREE.MeshLambertMaterial({ color: 0xFFEB3B, emissive: 0xFFEB3B, emissiveIntensity: 0.3 })
+  );
+  sign.position.set(0, 10, 0);
+  g.add(sign);
+
+  g.userData.type = 'power';
+  return g;
+}
+
+// 🚢 ميناء
+function makePort() {
+  const g = new THREE.Group();
+
+  // رصيف
+  const dock = new THREE.Mesh(
+    new THREE.BoxGeometry(14, 1, 6),
+    new THREE.MeshLambertMaterial({ color: 0x8B6F4A })
+  );
+  dock.position.y = 0.5;
+  dock.castShadow = true;
+  dock.receiveShadow = true;
+  g.add(dock);
+
+  // سفينة
+  const hull = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 2, 3),
+    new THREE.MeshLambertMaterial({ color: 0x1E88E5 })
+  );
+  hull.position.set(0, 2, -4);
+  hull.castShadow = true;
+  g.add(hull);
+
+  // سطح السفينة
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(9, 0.5, 2.5),
+    new THREE.MeshLambertMaterial({ color: 0xF5F0E8 })
+  );
+  deck.position.set(0, 3.25, -4);
+  g.add(deck);
+
+  // غرفة القيادة
+  const bridge = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 3, 2.5),
+    new THREE.MeshLambertMaterial({ color: 0xF5F0E8 })
+  );
+  bridge.position.set(-2, 4.5, -4);
+  bridge.castShadow = true;
+  g.add(bridge);
+
+  // حاويات على السفينة
+  for (let i = 0; i < 3; i++) {
+    const container = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 2),
+      new THREE.MeshLambertMaterial({
+        color: [0xE53935, 0x43A047, 0xFDD835][i]
+      })
+    );
+    container.position.set(1 + i * 2.5, 4, -4);
+    container.castShadow = true;
+    g.add(container);
+  }
+
+  // رافعة
+  const crane = new THREE.Group();
+  const craneTower = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 8, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xFFEB3B })
+  );
+  craneTower.position.y = 4;
+  craneTower.castShadow = true;
+  crane.add(craneTower);
+
+  const craneArm = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 0.3, 0.3),
+    new THREE.MeshLambertMaterial({ color: 0xFFEB3B })
+  );
+  craneArm.position.set(2, 8, 0);
+  crane.add(craneArm);
+  crane.position.set(6, 1, 2);
+  g.add(crane);
+
+  g.userData.type = 'port';
+  return g;
+}
+
+// 🕌 مسجد
+function makeMosque() {
+  const g = new THREE.Group();
+
+  // القاعدة
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 5, 10),
+    new THREE.MeshLambertMaterial({ color: 0xF5F0E8 })
+  );
+  base.position.y = 2.5;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  g.add(base);
+
+  // القبة الذهبية
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(3.5, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshLambertMaterial({ color: 0xFFD700 })
+  );
+  dome.position.y = 5;
+  dome.castShadow = true;
+  g.add(dome);
+
+  // المآذنة
+  const minaret = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.6, 10, 12),
+    new THREE.MeshLambertMaterial({ color: 0xF5F0E8 })
+  );
+  minaret.position.set(6, 5, 0);
+  minaret.castShadow = true;
+  g.add(minaret);
+
+  // قمة المآذنة
+  const minaretTop = new THREE.Mesh(
+    new THREE.ConeGeometry(1, 2.5, 8),
+    new THREE.MeshLambertMaterial({ color: 0xFFD700 })
+  );
+  minaretTop.position.set(6, 11, 0);
+  minaretTop.castShadow = true;
+  g.add(minaretTop);
+
+  // الباب
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 3.5, 0.3),
+    new THREE.MeshLambertMaterial({ color: 0x8B4513 })
+  );
+  door.position.set(0, 1.75, 5.1);
+  g.add(door);
+
+  g.userData.type = 'mosque';
+  return g;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  دالة إنشاء المبنى
+// ═══════════════════════════════════════════════════════════
+
+function createBuilding(type, x, z) {
+  let mesh;
+  switch (type) {
+    case 'pump': mesh = makePump(); break;
+    case 'refinery': mesh = makeRefinery(); break;
+    case 'shop': mesh = makeShop(); break;
+    case 'house': mesh = makeHouse(); break;
+    case 'power': mesh = makePower(); break;
+    case 'port': mesh = makePort(); break;
+    case 'mosque': mesh = makeMosque(); break;
+    default: mesh = makePump();
+  }
+
+  mesh.position.set(x, 0, z);
+  mesh.userData = mesh.userData || {};
+  mesh.userData.type = type;
+  mesh.userData.level = 1;
+  mesh.userData.baseIncome = BUILDING_TYPES[type].baseIncome;
+  mesh.userData.x = x;
+  mesh.userData.z = z;
+
+  // نضيف hitbox للتفاعل
+  mesh.userData.clickable = true;
+
+  scene.add(mesh);
+  buildings.push(mesh);
+  buildingMeshes.push(mesh);
+
+  return mesh;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  إنشاء المضخة الأولى (بداية اللعبة)
+// ═══════════════════════════════════════════════════════════
+
+const startingPump = createBuilding('pump', 0, 0);
+
+// نضيف حقل نفط صغير حول المضخة
+const oilFieldMat = new THREE.MeshLambertMaterial({ color: 0x2A1810 });
+for (let i = 0; i < 8; i++) {
+  const angle = (i / 8) * Math.PI * 2;
+  const radius = 3 + Math.random() * 3;
+  const patch = new THREE.Mesh(
+    new THREE.CircleGeometry(0.8 + Math.random() * 0.5, 8),
+    oilFieldMat
+  );
+  patch.rotation.x = -Math.PI / 2;
+  patch.position.set(
+    Math.cos(angle) * radius,
+    0.1,
+    Math.sin(angle) * radius
+  );
+  scene.add(patch);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  حالة اللعبة
+// ═══════════════════════════════════════════════════════════
+
+const GAME_STATE = {
+  money: 0,
+  totalEarned: 0,
+  speedMultiplier: 1.0,
+  clickPower: 1,
+  upgradeCost: 10,
+  lastSave: Date.now(),
+  lastUpdate: Date.now()
+};
+
+// ═══════════════════════════════════════════════════════════
+//  HUD Update
+// ═══════════════════════════════════════════════════════════
+
+const moneyEl = document.getElementById('moneyValue');
+const speedEl = document.getElementById('speedValue');
+
+function formatMoney(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+  return Math.floor(n).toString();
+}
+
+function updateHUD() {
+  moneyEl.textContent = formatMoney(GAME_STATE.money);
+  speedEl.textContent = GAME_STATE.speedMultiplier.toFixed(1);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════════════════════════
+
+let toastTimer = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  الحفظ والتحميل — SharedPreferences من JavaScript
+// ═══════════════════════════════════════════════════════════
+
+function saveGame() {
+  const save = {
+    money: GAME_STATE.money,
+    totalEarned: GAME_STATE.totalEarned,
+    speedMultiplier: GAME_STATE.speedMultiplier,
+    clickPower: GAME_STATE.clickPower,
+    upgradeCost: GAME_STATE.upgradeCost,
+    lastSave: Date.now(),
+    buildings: buildings.map(b => ({
+      type: b.userData.type,
+      level: b.userData.level,
+      x: b.userData.x,
+      z: b.userData.z
+    }))
+  };
+
+  try {
+    if (window.AndroidBridge && AndroidBridge.saveGame) {
+      AndroidBridge.saveGame(JSON.stringify(save));
+    } else {
+      // Fallback: localStorage (للتجربة على المتصفح)
+      localStorage.setItem('oil_empire_save', JSON.stringify(save));
+    }
+  } catch (e) {
+    console.error('Save error:', e);
+  }
+}
+
+function loadGame() {
+  try {
+    let data = null;
+    if (window.AndroidBridge && AndroidBridge.loadGame) {
+      data = AndroidBridge.loadGame();
+    } else {
+      data = localStorage.getItem('oil_empire_save');
+    }
+
+    if (!data) return false;
+
+    const save = JSON.parse(data);
+    GAME_STATE.money = save.money || 0;
+    GAME_STATE.totalEarned = save.totalEarned || 0;
+    GAME_STATE.speedMultiplier = save.speedMultiplier || 1.0;
+    GAME_STATE.clickPower = save.clickPower || 1;
+    GAME_STATE.upgradeCost = save.upgradeCost || 10;
+    GAME_STATE.lastSave = save.lastSave || Date.now();
+
+    // استرجاع المباني (بس المضخة الأساسية)
+    if (save.buildings && save.buildings.length > 0) {
+      // نحذفو المضخة الافتراضية
+      if (buildings.length > 0) {
+        scene.remove(buildings[0]);
+        buildings.length = 0;
+        buildingMeshes.length = 0;
+      }
+
+      // نعيد بناء اللي كان
+      save.buildings.forEach(b => {
+        const mesh = createBuilding(b.type, b.x, b.z);
+        mesh.userData.level = b.level || 1;
+      });
+    }
+
+    // نحسبو الوقت اللي مر (offline income)
+    const offlineMs = Date.now() - GAME_STATE.lastSave;
+    const offlineSec = offlineMs / 1000;
+    if (offlineSec > 60) {
+      const incomePerSec = calculateTotalIncome();
+      const offlineEarnings = incomePerSec * offlineSec * 0.5; // 50% offline
+      if (offlineEarnings > 0) {
+        GAME_STATE.money += offlineEarnings;
+        GAME_STATE.totalEarned += offlineEarnings;
+        showToast('💰 ربحت ' + formatMoney(offlineEarnings) + ' Đ أثناء غيابك!');
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.error('Load error:', e);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  حساب الدخل
+// ═══════════════════════════════════════════════════════════
+
+function calculateTotalIncome() {
+  let total = 0;
+  buildings.forEach(b => {
+    const data = BUILDING_TYPES[b.userData.type];
+    if (!data) return;
+    const base = data.baseIncome || 0;
+    const level = b.userData.level || 1;
+    total += base * level;
+  });
+  return total * GAME_STATE.speedMultiplier;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  الإنتاج التلقائي (كل 100ms)
+// ═══════════════════════════════════════════════════════════
+
+function tickIncome() {
+  const income = calculateTotalIncome() / 10; // كل 100ms
+  GAME_STATE.money += income;
+  GAME_STATE.totalEarned += income;
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  النقر على المبنى
+// ═══════════════════════════════════════════════════════════
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downPos = { x: 0, y: 0 };
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downPos.x = e.clientX;
+  downPos.y = e.clientY;
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const dx = e.clientX - downPos.x;
+  const dy = e.clientY - downPos.y;
+  if (Math.sqrt(dx * dx + dy * dy) > 10) return;
+
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(buildings, true);
+
+  if (hits.length > 0) {
+    // نطلعو للمبنى الأساسي
+    let obj = hits[0].object;
+    while (obj && !obj.userData.type) {
+      obj = obj.parent;
+    }
+
+    if (obj && obj.userData.type) {
+      handleBuildingClick(obj);
+    }
+  }
+});
+
+function handleBuildingClick(building) {
+  // إذا مضخة → نقر = ربح
+  if (building.userData.type === 'pump') {
+    const earned = GAME_STATE.clickPower;
+    GAME_STATE.money += earned;
+    GAME_STATE.totalEarned += earned;
+    updateHUD();
+
+    // تأثير بصري
+    building.scale.set(1.1, 1.1, 1.1);
+    setTimeout(() => {
+      building.scale.set(1, 1, 1);
+    }, 100);
+
+    showToast('+' + formatMoney(earned) + ' Đ');
+  } else {
+    // نفتح لوحة المعلومات
+    showBuildingInfo(building);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  لوحة المعلومات
+// ═══════════════════════════════════════════════════════════
+
+let currentBuilding = null;
+
+function showBuildingInfo(building) {
+  currentBuilding = building;
+  const type = building.userData.type;
+  const data = BUILDING_TYPES[type];
+  const level = building.userData.level || 1;
+
+  document.getElementById('infoTitle').textContent = data.emoji + ' ' + data.name;
+
+  const cost = Math.floor(data.basePrice * Math.pow(2, level - 1));
+  const income = (data.baseIncome || 0) * level;
+
+  document.getElementById('infoContent').innerHTML = `
+    <div class="row"><span>المستوى</span><b>${level} / ${data.maxLevel}</b></div>
+    <div class="row"><span>الدخل/ثانية</span><b>${formatMoney(income)} Đ</b></div>
+    <div class="row"><span>الوصف</span><b style="font-size:11px;">${data.desc}</b></div>
+  `;
+
+  const btn = document.getElementById('btnUpgrade');
+  btn.textContent = '⚡ ترقية (' + formatMoney(cost) + ')';
+  btn.disabled = level >= data.maxLevel || GAME_STATE.money < cost;
+
+  document.getElementById('infoPanel').classList.add('show');
+}
+
+function closeInfo() {
+  document.getElementById('infoPanel').classList.remove('show');
+  currentBuilding = null;
+}
+
+function upgradeCurrent() {
+  if (!currentBuilding) return;
+
+  const data = BUILDING_TYPES[currentBuilding.userData.type];
+  const level = currentBuilding.userData.level || 1;
+  const cost = Math.floor(data.basePrice * Math.pow(2, level - 1));
+
+  if (GAME_STATE.money < cost) {
+    showToast('💰 ما عندكش فلوس كافية');
+    return;
+  }
+
+  if (level >= data.maxLevel) {
+    showToast('⭐ المستوى الأقصى!');
+    return;
+  }
+
+  GAME_STATE.money -= cost;
+  currentBuilding.userData.level = level + 1;
+
+  // تأثير بصري
+  currentBuilding.scale.set(1.2, 1.2, 1.2);
+  setTimeout(() => currentBuilding.scale.set(1, 1, 1), 200);
+
+  showToast('⚡ ترقية! المستوى ' + (level + 1));
+  updateHUD();
+  showBuildingInfo(currentBuilding);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Build Panel
+// ═══════════════════════════════════════════════════════════
+
+function toggleBuildPanel() {
+  const panel = document.getElementById('buildPanel');
+  if (panel.classList.contains('show')) {
+    panel.classList.remove('show');
+    return;
+  }
+
+  // نعمر قائمة المباني
+  const list = document.getElementById('buildList');
+  list.innerHTML = '';
+
+  Object.keys(BUILDING_TYPES).forEach(type => {
+    if (type === 'pump') return; // المضخة الأولى فقط
+
+    const data = BUILDING_TYPES[type];
+    const canAfford = GAME_STATE.money >= data.basePrice;
+
+    const item = document.createElement('div');
+    item.className = 'build-item' + (canAfford ? '' : ' disabled');
+    item.innerHTML = `
+      <div class="emoji">${data.emoji}</div>
+      <div class="info">
+        <div class="name">${data.name}</div>
+        <div class="desc">${data.desc}</div>
+      </div>
+      <div class="price ${canAfford ? '' : 'cant-afford'}">${formatMoney(data.basePrice)} Đ</div>
+    `;
+
+    item.onclick = () => buildNew(type, data.basePrice);
+    list.appendChild(item);
+  });
+
+  panel.classList.add('show');
+}
+
+function buildNew(type, price) {
+  if (GAME_STATE.money < price) {
+    showToast('💰 ما عندكش فلاش كافية');
+    return;
+  }
+
+  // نلقاو مكان فاضي
+  let x, z;
+  for (let i = 0; i < 50; i++) {
+    x = (Math.random() - 0.5) * WORLD * 0.6;
+    z = (Math.random() - 0.5) * WORLD * 0.6;
+
+    // نتأكدو ما فيهش مبنى قريب
+    let conflict = false;
+    for (const b of buildings) {
+      const dx = x - b.position.x;
+      const dz = z - b.position.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 12) {
+        conflict = true;
+        break;
+      }
+    }
+
+    if (!conflict) break;
+  }
+
+  GAME_STATE.money -= price;
+  createBuilding(type, x, z);
+  updateHUD();
+  showToast('🎉 تم بناء ' + BUILDING_TYPES[type].name);
+  toggleBuildPanel(); // نقفل
+}
+
+// ═══════════════════════════════════════════════════════════
+//  الترقيات
+// ═══════════════════════════════════════════════════════════
+
+function toggleUpgrades() {
+  showToast('⚡ الترقيات قريباً!');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Zoom + Reset Camera
+// ═══════════════════════════════════════════════════════════
+
+function zoomIn() {
+  const dist = camera.position.distanceTo(controls.target);
+  if (dist > controls.minDistance + 10) {
+    camera.position.lerp(controls.target, 0.15);
+    controls.update();
+  }
+}
+
+function zoomOut() {
+  const dist = camera.position.distanceTo(controls.target);
+  if (dist < controls.maxDistance - 20) {
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    camera.position.add(dir.multiplyScalar(20));
+    controls.update();
+  }
+}
+
+function resetCamera() {
+  camera.position.set(100, 110, 100);
+  controls.target.set(0, 5, 0);
+  controls.update();
+  showToast('🎯 الكاميرا مُعاد ضبطها');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Animation Loop
+// ═══════════════════════════════════════════════════════════
+
+let lastFrame = performance.now();
+let time = 0;
+let saveTimer = 0;
+let incomeTimer = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const now = performance.now();
+  const dt = Math.min((now - lastFrame) / 1000, 0.1);
+  lastFrame = now;
+  time += dt;
+
+  // ═══ أنيميشن المضخات ═══
+  buildings.forEach(b => {
+    if (b.userData.type === 'pump' && b.userData.isAnimating) {
+      b.userData.animPhase = (b.userData.animPhase || 0) + dt * 2;
+      const swing = Math.sin(b.userData.animPhase) * 0.5;
+
+      // نحركو الذراع
+      b.children.forEach(child => {
+        if (child.userData.isArm) {
+          child.rotation.z = swing;
+        }
+      });
+    }
+  });
+
+  // ═══ أنيميشن الجمال ═══
+  camels.forEach(camel => {
+    const speed = camel.userData.speed;
+    camel.userData.direction += (Math.random() - 0.5) * 0.02;
+
+    camel.position.x += Math.cos(camel.userData.direction) * speed * dt;
+    camel.position.z += Math.sin(camel.userData.direction) * speed * dt;
+
+    // حدود
+    const limit = WORLD * 0.7;
+    if (camel.position.x > limit || camel.position.x < -limit ||
+        camel.position.z > limit || camel.position.z < -limit) {
+      camel.userData.direction += Math.PI;
+    }
+
+    camel.rotation.y = -camel.userData.direction;
+  });
+
+  // ═══ Particles تتحرك ═══
+  const positions = particles.geometry.attributes.position.array;
+  for (let i = 0; i < positions.length; i += 3) {
+    positions[i] += Math.sin(time + i) * 0.05;
+    positions[i + 1] += 0.05;
+    if (positions[i + 1] > 40) positions[i + 1] = 0;
+  }
+  particles.geometry.attributes.position.needsUpdate = true;
+
+  // ═══ شمس تتوهج ═══
+  sunGlow.scale.setScalar(1 + Math.sin(time * 0.5) * 0.1);
+
+  // ═══ الإنتاج كل 100ms ═══
+  incomeTimer += dt;
+  if (incomeTimer >= 0.1) {
+    tickIncome();
+    incomeTimer = 0;
+  }
+
+  // ═══ الحفظ كل 10 ثواني ═══
+  saveTimer += dt;
+  if (saveTimer >= 10) {
+    saveGame();
+    saveTimer = 0;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Window Resize
+// ═══════════════════════════════════════════════════════════
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Keyboard (للاختبار على المتصفح)
+// ═══════════════════════════════════════════════════════════
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'r' || e.key === 'R') resetCamera();
+  if (e.key === 'b' || e.key === 'B') toggleBuildPanel();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Android Bridge (يُستدعى من Java)
+// ═══════════════════════════════════════════════════════════
+
+window.onGameLoad = function() {
+  console.log('📱 onGameLoad called');
+  const loaded = loadGame();
+  if (loaded) {
+    showToast('✅ تم تحميل التقدم');
+  }
+  updateHUD();
+};
+
+window.onGameSave = function() {
+  saveGame();
+  console.log('💾 onGameSave called');
+};
+
+window.onBackPressed = function() {
+  // إذا فيه panel مفتوح → نقفلو
+  const buildPanel = document.getElementById('buildPanel');
+  const infoPanel = document.getElementById('infoPanel');
+
+  if (buildPanel.classList.contains('show')) {
+    buildPanel.classList.remove('show');
+    return true;
+  }
+  if (infoPanel.classList.contains('show')) {
+    infoPanel.classList.remove('show');
+    return true;
+  }
+
+  return false;
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Start
+// ═══════════════════════════════════════════════════════════
+
+function startGame() {
+  console.log('🎮 Starting Oil Empire...');
+
+  // نخفي شاشة التحميل
+  document.getElementById('loading').style.display = 'none';
+
+  // نحمّل التقدم
+  const loaded = loadGame();
+
+  if (!loaded) {
+    // لعبة جديدة
+    GAME_STATE.money = 0;
+    GAME_STATE.totalEarned = 0;
+    GAME_STATE.speedMultiplier = 1.0;
+    GAME_STATE.clickPower = 1;
+    GAME_STATE.upgradeCost = 10;
+
+    // نعرض welcome
+    setTimeout(() => {
+      showToast('🎉 مرحباً في بترول أُمّة!');
+    }, 500);
+
+    setTimeout(() => {
+      showToast('👆 اضغط على المضخة لجمع النفط');
+    }, 3000);
+  }
+
+  updateHUD();
+
+  // نبدأ الـ animation
+  animate();
+
+  // نبلّغو Android
+  if (window.AndroidBridge && AndroidBridge.onReady) {
+    AndroidBridge.onReady();
+  }
+
+  console.log('✅ Game started');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Auto-start
+// ═══════════════════════════════════════════════════════════
+
+setTimeout(startGame, 800);
+
+</script>
+</body>
+</html>

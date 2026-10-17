@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sandy_bg">#F4A460</color>
+    <color name="sand_dark">#D2691E</color>
+    <color name="oil_black">#1A1A1A</color>
+    <color name="oil_red">#FF6B35</color>
+    <color name="oil_gold">#FFD700</color>
+</resources>

@@ -1,0 +1,28 @@
+# Build
+*.iml
+.gradle
+/local.properties
+/.idea
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/build/
+
+# Keystore
+*.keystore
+*.jks
+
+# APK
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Temp files (مؤقتة)
+*_p*.txt
+*_merged.java
+*_BACKUP.html
+
+# Logs
+*.log
